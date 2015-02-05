@@ -1,0 +1,21 @@
+The Matrix Multiplication Proj Given by Sir
+
+IDEA
+A soon as we multiply one row of A, we can delete that row. So we allocate 1 more row for C and delete a row in A.
+
+Therefore enough to alloc of A and B.
+
+But, at a time only one row of A is used. Therefore Allocating Mem for B is enough.
+
+UPDATE
+Turning everything in Binary file implementations to increase speed and decrease space.
+
+UPDATE
+till N=2**12 implement normally
+after that read in every row multiply and then write
+
+UPDATE
+Implemented Binary matrix I/P using octave's C-Style I-O functions but asnwers seems to have a large differnces ( i.e. even in the 10's place)
+So going to use Octave and save in Text File, then convert the text file to binary file using C-Program.
+
+Also implment Verify using Binary Files.

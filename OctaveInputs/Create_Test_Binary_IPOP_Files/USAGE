@@ -1,0 +1,7 @@
+Make_Big_Binary_IP_File < input[N].txt
+input[N].txt ::
+"
+N
+[A]
+[B]
+"
