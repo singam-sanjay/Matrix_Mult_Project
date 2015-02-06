@@ -1,4 +1,4 @@
-The Matrix Multiplication Proj Given by Sir
+The Matrix Multiplication Proj Given by DSB Sir
 
 IDEA
 A soon as we multiply one row of A, we can delete that row. So we allocate 1 more row for C and delete a row in A.
