@@ -1,13 +1,24 @@
 #include<time.h>
 #include<omp.h>
+#include<mkl.h>
 
 #define NUMT 4
 #define MATRIX_ALL_FUNC_1DMAT
 
 #define D(x) ((double)(x))
 #define get_cpu_freq() (mkl_get_cpu_frequency()*1000000000.0)
-//#define get_cpu_freq_ghz() mkl_get_cpu_frequency()
-inline double get_cpu_freq_ghz() {
+
+
+static __inline__ unsigned long long __rdtsc(void)
+{
+	  unsigned hi, lo;
+	    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+	      return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
+}
+
+
+inline double get_cpu_freq_ghz()
+{
 	unsigned long long t0, t1;
 	t0 = __rdtsc();
 	sleep(1);
@@ -15,8 +26,7 @@ inline double get_cpu_freq_ghz() {
 	return (D(t1-t0)/1e09);
 }
 
-#define Gflops(cycles, nflops, freqghz) (D(freqghz)*D(nflops)/D(cycles))
-
+#define GFlops(cycles, nflops, freqghz) (D(freqghz)*D(nflops)/D(cycles))
 
 void AllocA()
 {
@@ -75,6 +85,7 @@ void MultABTransParLEGACY()
 {
 	omp_set_num_threads(NUMT);
 	double start = omp_get_wtime(),time_taken;
+	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
 
 	#pragma omp parallel
 	{
@@ -120,8 +131,9 @@ void MultABTransParLEGACY()
 			}
 		}
 	}
+	clk_cnt_stop = __rdtsc();
 	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken=(omp_get_wtime()-start));
-	printf("\n%zu : %lf",N,time_taken);
+	printf("\n%zu : %lf GFlops:%lf",N,time_taken,GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq()));
 }
 
 PutC()
