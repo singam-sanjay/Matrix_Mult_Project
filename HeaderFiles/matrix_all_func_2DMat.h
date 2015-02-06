@@ -81,7 +81,7 @@ void GetA()
 void GetBSimple()
 {
 	register int iter1;
-	fseek(input,sizeof(double)*N*N,SEEK_SET);
+
 	for( iter1 = 0; iter1<N ; iter1+=1 )
 	{
 		fread(B[iter1],sizeof(double),N,input);
