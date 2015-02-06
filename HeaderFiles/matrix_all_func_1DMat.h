@@ -4,30 +4,48 @@
 #define NUMT 4
 #define MATRIX_ALL_FUNC_1DMAT
 
+#define D(x) ((double)(x))
+#define get_cpu_freq() (mkl_get_cpu_frequency()*1000000000.0)
+//#define get_cpu_freq_ghz() mkl_get_cpu_frequency()
+inline double get_cpu_freq_ghz() {
+	unsigned long long t0, t1;
+	t0 = __rdtsc();
+	sleep(1);
+	t1 = __rdtsc();
+	return (D(t1-t0)/1e09);
+}
+
+#define Gflops(cycles, nflops, freqghz) (D(freqghz)*D(nflops)/D(cycles))
 
 
 void AllocA()
 {
+	fprintf(stderr,"Allocating A.\n");
 	while( A==NULL )
 	{
 		A = (double*)malloc( sizeof(double)*N*N );
 	}
+	fprintf(stderr,"Done Allocating A.\n");
 }
 
 void AllocB()
 {
+	fprintf(stderr,"Allocating B.\n");
 	while( B==NULL )
 	{
 		B = (double*)malloc( sizeof(double)*N*N );
 	}
+	fprintf(stderr,"Done Allocating B.\n");
 }
 
 void AllocC()
 {
+	fprintf(stderr,"Allocating C.\n");
 	while( C==NULL )
 	{
 		C = (double*)malloc( sizeof(double)*N*N );
 	}
+	fprintf(stderr,"Done Allocating C.\n");
 }
 
 void GetA()
