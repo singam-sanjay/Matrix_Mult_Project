@@ -2,8 +2,8 @@
 sleep 10
 ./i_prog 1024
 sleep 10
-./i_prog 1025
-sleep 10
+#./i_prog 1025 # Segfault after alloc matrices
+#sleep 10
 
 ./i_prog 2047
 sleep 10
