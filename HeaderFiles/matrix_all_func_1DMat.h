@@ -132,8 +132,9 @@ void MultABTransParLEGACY()
 		}
 	}
 	clk_cnt_stop = __rdtsc();
-	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken=(omp_get_wtime()-start));
-	printf("\n%zu : %lf GFlops:%lf",N,time_taken,GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq()));
+	printf("\n%zu : %lf GFlops:%lf\n",N,time_taken=(omp_get_wtime()-start),GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq_ghz()));
+	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken);
+
 }
 
 PutC()
