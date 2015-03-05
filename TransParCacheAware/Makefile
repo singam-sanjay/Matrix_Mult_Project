@@ -1,4 +1,4 @@
-main.c : ../HeaderFiles/matrix_all_func_1DMat.h
+main.c : ../HeaderFiles/matrix_all_func_1DMat.h ../HeaderFiles/GFlOps.h 
 	touch main.c
 
 i_prog : main.c
