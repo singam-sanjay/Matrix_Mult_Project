@@ -5,28 +5,7 @@
 #define NUMT 4
 #define MATRIX_ALL_FUNC_1DMAT
 
-#define D(x) ((double)(x))
-#define get_cpu_freq() (mkl_get_cpu_frequency()*1000000000.0)
-
-
-static __inline__ unsigned long long __rdtsc(void)
-{
-	  unsigned hi, lo;
-	    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-	      return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-
-
-inline double get_cpu_freq_ghz()
-{
-	unsigned long long t0, t1;
-	t0 = __rdtsc();
-	sleep(1);
-	t1 = __rdtsc();
-	return (D(t1-t0)/1e09);
-}
-
-#define GFlops(cycles, nflops, freqghz) (D(freqghz)*D(nflops)/D(cycles))
+#include"./GFlOps.h"
 
 void AllocA()
 {
@@ -34,6 +13,16 @@ void AllocA()
 	while( A==NULL )
 	{
 		A = (double*)malloc( sizeof(double)*N*N );
+	}
+	fprintf(stderr,"Done Allocating A.\n");
+}
+
+void MKLAllocA()
+{
+	fprintf(stderr,"Allocating A.\n");
+	while( A==NULL )
+	{
+		A = (double*)mkl_malloc( sizeof(double)*N*N ,64);
 	}
 	fprintf(stderr,"Done Allocating A.\n");
 }
@@ -48,12 +37,33 @@ void AllocB()
 	fprintf(stderr,"Done Allocating B.\n");
 }
 
+void MKLAllocB()
+{
+	fprintf(stderr,"Allocating B.\n");
+	while( B==NULL )
+	{
+		B = (double*)mkl_malloc( sizeof(double)*N*N ,64);
+	}
+	fprintf(stderr,"Done Allocating B.\n");
+}
+
 void AllocC()
 {
 	fprintf(stderr,"Allocating C.\n");
 	while( C==NULL )
 	{
 		C = (double*)malloc( sizeof(double)*N*N );
+	}
+	fprintf(stderr,"Done Allocating C.\n");
+}
+
+
+void MKLAllocC()
+{
+	fprintf(stderr,"Allocating C.\n");
+	while( C==NULL )
+	{
+		C = (double*)mkl_malloc( sizeof(double)*N*N ,64);
 	}
 	fprintf(stderr,"Done Allocating C.\n");
 }
@@ -84,74 +94,61 @@ void GetBTrans()
 void MultABTransParLEGACY()
 {
 	omp_set_num_threads(NUMT);
+	register size_t _N=N,_2N=2*N,_3N=3*N; // Since these are accessed a lot of times
 	double start = omp_get_wtime(),time_taken;
 	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
 
 	#pragma omp parallel
 	{
 		register int iter1,iter2,iter3,last = (N*(omp_get_thread_num()+1))/NUMT;
-		register double result1,result2,result3,result4,*a,*b,*c;
+		register double result1,result2,result3,result4,*a,*b,*c,bval;
 		//printf("%i\n",omp_get_thread_num());
 		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=4,a+=(4*N),c+=(4*N) )
 		{
-			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)
+			for(iter2=0,b=B ; iter2<_N ; iter2+=1,b+=_N)
 			{
 				result1 = 0.0f;
 				result2 = 0.0f;
 				result3 = 0.0f;
 				result4 = 0.0f;
-
-				for( iter3=0 ; iter3<N ; iter3+=1 )
+				
+				#pragma unroll
+				for( iter3=0 ; iter3<_N ; iter3+=1 )
 				{
-					result1 += (*(a+iter3   ))  * (*(b+iter3));
-					result2 += (*(a+iter3+  N)) * (*(b+iter3));
-					result3 += (*(a+iter3+2*N)) * (*(b+iter3));
-					result4 += (*(a+iter3+3*N)) * (*(b+iter3));
+					bval = *(b+iter3);
+					result1 += (*(a+iter3      )) * bval;
+					result2 += (*(a+iter3+  _N )) * bval;
+					result3 += (*(a+iter3+ _2N )) * bval;
+					result4 += (*(a+iter3+ _3N )) * bval;
 				}
 				
 				*(c+iter2    ) = result1;
-				*(c+iter2+  N) = result2;
-				*(c+iter2+2*N) = result3;
-				*(c+iter2+3*N) = result4;
-/*
-				for( iter3=0 ; iter3<N ; iter3+=1 )
-				{
-					result1 += (*(a+iter3)) * (*(b+iter3));
-				}
-				*(c+iter2) = result;
-
-				result = 0.0f;
-				a += N;
-				for( iter3=0 ; iter3<N ; iter3+=1 )
-				{
-					result += (*(a+iter3)) * (*(b+iter3));
-				}
-				*(c+N+iter2) = result;
-
-				result = 0.0f;
-				a += N;
-				for( iter3=0 ; iter3<N ; iter3+=1 )
-				{
-					result += (*(a+iter3)) * (*(b+iter3));
-				}
-				*(c+(N<<1)+iter2) = result;
-
-				result = 0.0f;
-				a += N;
-				for( iter3=0 ; iter3<N ; iter3+=1 )
-				{
-					result += (*(a+iter3)) * (*(b+iter3));
-				}
-				*(c+(N<<1)+N+iter2) = result;
-				a -= (3*N);
-*/
+				*(c+iter2+ _N) = result2;
+				*(c+iter2+_2N) = result3;
+				*(c+iter2+_3N) = result4;
 			}
 		}
 	}
 	clk_cnt_stop = __rdtsc();
 	printf("\n%zu : %lf GFlops:%lf\n",N,time_taken=(omp_get_wtime()-start),GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq_ghz()));
 	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken);
+	return;
+}
 
+void MKLMultAB()
+{
+	omp_set_num_threads(NUMT);
+	double start = omp_get_wtime(),time_taken;
+	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
+	{
+		#define alpha 1.0
+		#define beta  0.0
+		cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, N, N, N, alpha, A, N, B, N, beta, C, N);
+	}
+	clk_cnt_stop = __rdtsc();
+	printf("\n%zu : %lf GFlops:%lf\n",N,time_taken=(omp_get_wtime()-start),GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq_ghz()));
+	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken);
+	return;
 }
 
 PutC()
@@ -165,5 +162,14 @@ FreeAll()
 	free(A);
 	free(B);
 	free(C);
+	fprintf(stderr,"Done Freeing A,B and C\n");
+}
+
+MKLFreeAll()
+{
+	fprintf(stderr,"Freeing A,B and C\n");
+	mkl_free(A);
+	mkl_free(B);
+	mkl_free(C);
 	fprintf(stderr,"Done Freeing A,B and C\n");
 }
