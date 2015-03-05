@@ -2,8 +2,9 @@
 #include<omp.h>
 
 #define MATRIX_ALL_FUNC_2DMAT
-
 #define NUMT 4
+
+#include"./GFlOps.h"
 
 void AllocA()
 {
@@ -197,7 +198,8 @@ void MultABTransSeqHIHGHMEM()
 void MultABTransParLEGACY()
 {
 	omp_set_num_threads(NUMT);
-	double start = omp_get_wtime();
+	double start = omp_get_wtime(),time_taken;
+	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
 
 	#pragma omp parallel
 	{
@@ -218,7 +220,9 @@ void MultABTransParLEGACY()
 			}
 		}
 	}
-	fprintf(stderr,"\nTime Taken:%lf sec\n",omp_get_wtime()-start);
+	clk_cnt_stop = __rdtsc();
+	printf("\n%zu : %lf GFlops:%lf\n",N,time_taken=(omp_get_wtime()-start),GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq_ghz()));
+	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken);
 }
 
 void PutC()
