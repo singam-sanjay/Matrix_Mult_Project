@@ -90,16 +90,33 @@ void MultABTransParLEGACY()
 	#pragma omp parallel
 	{
 		register int iter1,iter2,iter3,last = (N*(omp_get_thread_num()+1))/NUMT;
-		register double result,*a,*b,*c;
+		register double result1,result2,result3,result4,*a,*b,*c;
 		//printf("%i\n",omp_get_thread_num());
 		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=4,a+=(4*N),c+=(4*N) )
 		{
 			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)
 			{
-				result = 0.0f;
+				result1 = 0.0f;
+				result2 = 0.0f;
+				result3 = 0.0f;
+				result4 = 0.0f;
+
 				for( iter3=0 ; iter3<N ; iter3+=1 )
 				{
-					result += (*(a+iter3)) * (*(b+iter3));
+					result1 += (*(a+iter3   ))  * (*(b+iter3));
+					result2 += (*(a+iter3+  N)) * (*(b+iter3));
+					result3 += (*(a+iter3+2*N)) * (*(b+iter3));
+					result4 += (*(a+iter3+3*N)) * (*(b+iter3));
+				}
+				
+				*(c+iter2    ) = result1;
+				*(c+iter2+  N) = result2;
+				*(c+iter2+2*N) = result3;
+				*(c+iter2+3*N) = result4;
+/*
+				for( iter3=0 ; iter3<N ; iter3+=1 )
+				{
+					result1 += (*(a+iter3)) * (*(b+iter3));
 				}
 				*(c+iter2) = result;
 
@@ -127,7 +144,7 @@ void MultABTransParLEGACY()
 				}
 				*(c+(N<<1)+N+iter2) = result;
 				a -= (3*N);
-
+*/
 			}
 		}
 	}
