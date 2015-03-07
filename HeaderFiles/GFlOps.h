@@ -13,11 +13,21 @@ static __inline__ unsigned long long __rdtsc(void)
 
 inline double get_cpu_freq_ghz()
 {
-	unsigned long long t0, t1;
-	t0 = __rdtsc();
-	sleep(1);
-	t1 = __rdtsc();
-	return (D(t1-t0)/1e09);
+	static char called = 0;
+	static double GHz;
+	if( called )
+	{
+		return GHz;
+	}
+	else
+	{
+		unsigned long long t0, t1;
+		t0 = __rdtsc();
+		sleep(1);
+		t1 = __rdtsc();
+		called = 1;
+		return (GHz =  (D(t1-t0)/1e09) );
+	}
 }
 
 
