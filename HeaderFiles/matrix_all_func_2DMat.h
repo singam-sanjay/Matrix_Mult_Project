@@ -6,6 +6,7 @@
 
 #include"./GFlOps.h"
 
+
 void AllocA()
 {
 	fprintf(stderr,"Allocating A\n");
@@ -82,16 +83,18 @@ void GetA()
 void GetBSimple()
 {
 	register int iter1;
-
+	fprintf(stderr,"Getting B Simple\n");
 	for( iter1 = 0; iter1<N ; iter1+=1 )
 	{
 		fread(B[iter1],sizeof(double),N,input);
 	}
+	fprintf(stderr,"Done getting B Simple\n");
 }
 
 void GetBTrans()
 {
 	register int iter1,iter2;
+	fprintf(stderr,"Getting B Transpose\n");
 	fseek(input,sizeof(double)*N*N,SEEK_SET);
 	for( iter1 = 0; iter1<N ; iter1+=1 )
 	{
@@ -100,6 +103,7 @@ void GetBTrans()
 			fread(B[iter2]+iter1,sizeof(double),1,input);
 		}
 	}
+	fprintf(stderr,"Done getting B Transpose\n");
 }
 
 void MultABSimpleSeqHIGHMEM()
@@ -160,25 +164,26 @@ void MultABSimpleParLEGACY()
 			}
 		}
 	}
-//	fprintf(stderr,"\nTime Taken:%lf sec\n",omp_get_wtime()-start);
+	fprintf(stderr,"\nTime Taken:%lf sec\n",omp_get_wtime()-start);
 	printf("%i:%lf sec\n",N,omp_get_wtime()-start);
 }
 
-void MultABTransSeqHIHGHMEM()
+void MultABTransSeqHIGHMEM()
 {
 	register int iter1,iter2,iter3;
 	register double time_taken=0.0f,**b;
-	register clock_t start;
+	register double start;
 	register double result;
 	double A[N],C[N];
+	unsigned long long clk_cnt_start,clk_cnt_stop;
 
 	fseek(input,0,SEEK_SET);
-
+	start = omp_get_wtime();
+	clk_cnt_start = __rdtsc();
 	for( iter1=0 ; iter1<N ; iter1+=1 )
 	{
 		fprintf(stderr,"\r%i/%i",iter1+1,N);
 		fread(A,sizeof(double),N,input);
-		start = clock();
 		for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=1 )
 		{
 			result = 0.0f;
@@ -188,11 +193,11 @@ void MultABTransSeqHIHGHMEM()
 			}
 			C[iter2] = result;
 		}
-		time_taken += ((double)(clock()-start))/CLOCKS_PER_SEC ;
 		fwrite(C,sizeof(double),N,output);
 	}
-	fprintf(stderr,"\ntime taken:%lf sec\n",time_taken);
-//	printf("\n%i : %lf",N,time_taken);
+	clk_cnt_stop = __rdtsc();
+	printf("\n%zu : %lf GFlops:%lf\n",N,time_taken=(omp_get_wtime()-start),GFlops((clk_cnt_stop-clk_cnt_start),2.0l*N*N*N,get_cpu_freq_ghz()));
+	fprintf(stderr,"\nTime Taken:%lf sec\n",time_taken);
 }
 
 void MultABTransParLEGACY()
@@ -214,7 +219,7 @@ void MultABTransParLEGACY()
 				for( iter3=0 ; iter3<N ; iter3+=1 )
 				{
 					result += (*(*(a)+iter3)) * (*(*(b)+iter3));
-					//C[iter1][iter2] += A[iter1][iter3]*A[iter2][iter3];
+					//C[iter1][iter2] += A[iter1][iter3]*B[iter2][iter3];
 				}
 				*(*(c)+iter2) = result;
 			}
