@@ -1,0 +1,5 @@
+DEBUG
+	Print messages before and after Memory Allocation/Read/Write/Deallocation operations.
+
+TOOMUCHTODEBUG
+	Print messages in hotspots, such as in the outermost loop of MultAB*().
