@@ -263,10 +263,16 @@ void MultABTransParLEGACY()
 void PutC()
 {
 	register int iter1;
+	#ifdef DEBUG
+	fprintf(stderr,"Writing C.\n");
+	#endif
 	for( iter1=0 ; iter1<N ; iter1+=1 )
 	{
 		fwrite(C[iter1],sizeof(double),N,output);
 	}
+	#ifdef DEBUG
+	fprintf(stderr,"Done writing C.\n");
+	#endif
 }
 
 void FreeAll()
