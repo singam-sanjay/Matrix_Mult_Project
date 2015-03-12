@@ -93,20 +93,49 @@ void GetBTrans()
 
 void MultABTransParLEGACY()
 {
+	fprintf(stderr,"The actual function is in development.\n");
+}
+
+void MultABTransParLEGACYOrig()
+{
+	/* Cache Aware Multiplication
+	*
+	* We keep a set of rows from matrix A in the cache, compute all possible results in C which involve the rows, and then move onto
+	* the next set of rows in A and repeat the same.
+	*
+	* for coulumn in COULUMN(B): # N iterations
+	* 	for row in L3_Cache: # "jump" iterations
+	* 		result = row*coulumn; # N iterations
+	*
+	* Let's say there are "jump" rows in the cache. Hence this of O(N*jump*N) complexity. Since there N rows in matrix A and "jump" rows
+	* are used in the cache, the rows have to be moved to the cache ceil(N/jump) times (ceil since N may not be a multiple of jump, therefor
+	* the last r(=N%jump) rows also need to be involved in the multiplication, hence there are floor(N/jump)+1( if N not mult of jump) == floor(N/jump)
+	* 
+	* Total complexity = O(N/jump)*O(N*jump*N) = O(N*N*N)
+	*
+	* To maximise efficiency, maximum possible rows from A would be filled in L3_Cache ( Improves temporal locality, same column of B used repeatedly
+	* ,each time with a different row of A in L3_Cache )
+	*
+	* max(jump) = sizeof(L3_Cache)/sizeof(Row)
+	* 
+	*/
 	omp_set_num_threads(NUMT);
-	register size_t _N=N,_2N=2*N,_3N=3*N; // Since these are accessed a lot of times
+	#define sizeof_L3 (4096lu*1024lu) // 4096kB = 4096 * 1024 // next time it should be a function
+	register size_t jump = sizeof_L3/(N*sizeof(double)); // SPACE/sizeof_1_row => ( MEM / (MEM/ROW) ) ==> ROW therefore #rows in L3 cache
 	double start = omp_get_wtime(),time_taken;
 	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
 
 	#pragma omp parallel
 	{
 		register int iter1,iter2,iter3,last = (N*(omp_get_thread_num()+1))/NUMT;
-		register double result1,result2,result3,result4,*a,*b,*c,bval;
-		//printf("%i\n",omp_get_thread_num());
-		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=4,a+=(4*N),c+=(4*N) )
+		register double *a,*b,*c;
+		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=jump,a+=(jump*N),c+=(jump*N) )
 		{
-			for(iter2=0,b=B ; iter2<_N ; iter2+=1,b+=_N)
+			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)
 			{
+			
+				bzero(c,sizeof(double)*jump);
+				/*
 				result1 = 0.0f;
 				result2 = 0.0f;
 				result3 = 0.0f;
@@ -126,6 +155,7 @@ void MultABTransParLEGACY()
 				*(c+iter2+ _N) = result2;
 				*(c+iter2+_2N) = result3;
 				*(c+iter2+_3N) = result4;
+				*/
 			}
 		}
 	}

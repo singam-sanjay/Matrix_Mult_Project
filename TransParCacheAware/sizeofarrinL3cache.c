@@ -12,7 +12,7 @@ int main()
 
 	while( n<=15 )
 	{
-		printf("2^%i:%zu:%zuKB can have %zu rows\n",n,sizeof_row,sizeof_row/KB,sizeof_L3/sizeof_row);
+		printf("N=2^%i (SizeOfRow %6zuB:%3zukB) can have %3zu rows in L3 cache\n",n,sizeof_row,sizeof_row/KB,sizeof_L3/sizeof_row);
 		n += 1;
 		sizeof_row *= 2;
 	}
