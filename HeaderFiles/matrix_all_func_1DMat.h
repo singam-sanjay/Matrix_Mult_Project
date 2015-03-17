@@ -1,6 +1,7 @@
 #include<time.h>
 #include<omp.h>
 #include<mkl.h>
+#include<strings.h> // bzero()
 
 #define NUMT 4
 #define MATRIX_ALL_FUNC_1DMAT
@@ -120,7 +121,7 @@ void MultABTransParLEGACY()
 	* 
 	*/
 	omp_set_num_threads(NUMT);
-	#define sizeof_L3 (4096lu*1024lu) // 4096kB = 4096 * 1024 // XX Replace by func XX
+	#define sizeof_L3 (4096*1024) // 4096kB = 4096 * 1024 // XX Replace by func XX
 	register int jump = sizeof_L3/(N*sizeof(double));
 	double start = omp_get_wtime(),time_taken;
 	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
@@ -131,18 +132,17 @@ void MultABTransParLEGACY()
 		register double *a,*b,*c,bval;
 		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=jump,a+=(jump*N),c+=(jump*N) )
 		{
+			bzero(c,sizeof(double)*jump*N);
 			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)
 			{
 			
-				bzero(c,sizeof(double)*jump);
-
 				for( iter3=0 ; iter3<N ; iter3+=1 )
 				{
 					bval = *(b+iter3);
 					#pragma unroll
 					for( iter4=0 ; iter4<jump ; iter4+=1 )
 					{
-						*(c+iter4) += *(a+N*iter4)*bval;
+						*(c+iter3+iter4*N) += *(a+iter3+N*iter4)*bval;
 					}
 				}
 			}
