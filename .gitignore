@@ -1,0 +1,6 @@
+*.bin
+input*.txt
+answer*.txt
+*.h~
+a.out
+i_prog*
