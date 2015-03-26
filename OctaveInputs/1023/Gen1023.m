@@ -1,12 +1,17 @@
-a = rand(1023,1023);
-b = rand(1023,1023);
+N = 1023;
+a = rand(N,N)/(2**0.5);
+b = rand(N,N)/(2**0.5);
 c = a*b;
 
-N = [ 1023 ];
+N = [ N ];
 
-dlmwrite("input1023.txt",N," ");
-dlmwrite("input1023.txt",a," ","-append");
-dlmwrite("input1023.txt",b," ","-append");
-dlmwrite("answer1023.txt",c," ");
+input_file = sprintf('input%i.txt',N);
+output_file = sprintf('answer%i.txt',N);
+
+dlmwrite(input_file,N," ");
+dlmwrite(input_file,a," ","-append");
+dlmwrite(input_file,b," ","-append");
+dlmwrite(output_file,N," ");
+dlmwrite(output_file,c," ","-append");
 
 
