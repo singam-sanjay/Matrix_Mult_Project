@@ -1,12 +1,26 @@
 #include<time.h>
 #include<omp.h>
 #include<mkl.h>
-#include<strings.h> // bzero()
 
-#define NUMT 4
 #define MATRIX_ALL_FUNC_1DMAT
 
 #include"./GFlOps.h"
+
+//#define TOOMUCHTODEBUG
+#define DEBUGNUMT 4
+
+#ifdef TOOMUCHTODEBUG
+	#define NUMT DEBUGNUMT
+#else
+	#define NUMT 4
+#endif
+
+
+void inline nsleep()
+{
+	static struct timespec hold = {0, 10000};
+	nanosleep(&hold,NULL);
+}
 
 void AllocA()
 {
@@ -122,29 +136,46 @@ void MultABTransParLEGACY()
 	*/
 	omp_set_num_threads(NUMT);
 	#define sizeof_L3 (4096*1024) // 4096kB = 4096 * 1024 // XX Replace by func XX
-	register int jump = sizeof_L3/(N*sizeof(double));
+	register int jump = sizeof_L3/(N*sizeof(double)); // Is the number of rows that can be stored at a time in L3 cache
 	double start = omp_get_wtime(),time_taken;
 	unsigned long long clk_cnt_start=__rdtsc(),clk_cnt_stop;
+
+	jump /= (NUMT); // We want each thread to store some rows in L3 cache
 
 	#pragma omp parallel
 	{
 		register int iter1,iter2,iter3,iter4,last = (N*(omp_get_thread_num()+1))/NUMT;
-		register double *a,*b,*c,bval;
+		register double *a,*b,*c,result;
+		#ifdef TOOMUCHTODEBUG
+			fprintf(stderr,"Thread %i %i-%i rows\n",omp_get_thread_num(),(N*omp_get_thread_num())/NUMT,last-1);
+			#pragma omp barrier
+		#endif
 		for( iter1=(N*omp_get_thread_num())/NUMT ,a=A+iter1*N ,c=C+iter1*N ; iter1<last ; iter1+=jump,a+=(jump*N),c+=(jump*N) )
 		{
-			bzero(c,sizeof(double)*jump*N);
-			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)
+			#ifdef TOOMUCHTODEBUG
+				#pragma omp barrier
+				{ fprintf(stderr,"\nMultiplying %i-%i Rows of A with B @ thread %i\n",iter1,iter1+jump,omp_get_thread_num()); }
+				#pragma omp barrier
+			#endif
+			for(iter2=0,b=B ; iter2<N ; iter2+=1,b+=N)// iterate through the coulumns of B ( rows of B' in this case )
 			{
-			
-				for( iter3=0 ; iter3<N ; iter3+=1 )
+				for( iter3=0; iter3<jump ; iter3+=1 )// iterate through rows of A and C
 				{
-					bval = *(b+iter3);
+					result = 0.0f;
 					#pragma unroll
-					for( iter4=0 ; iter4<jump ; iter4+=1 )
+					for( iter4=0 ; iter4<N ; iter4+=1 )// iterate whithin the rows of A and columns of B ( rows of B' )
 					{
-						*(c+iter3+iter4*N) += *(a+iter3+N*iter4)*bval;
+						#ifdef TOOMUCHTODEBUG
+							#pragma omp critical
+							{ fprintf(stderr,"C[%i][%i] += A[%i][%i]*B[%i][%i]@T%i\r",iter3,iter2,iter3,iter4,iter4,iter2,omp_get_thread_num());nsleep(); }
+						#endif
+						result += ( *(a+iter4) * *(b+iter4) );
 					}
+					*(c+iter3*N+iter2) = result;
+					a += N;
 				}
+				a -= (jump*N);
+
 			}
 		}
 	}
