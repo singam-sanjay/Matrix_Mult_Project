@@ -11,3 +11,5 @@ sleep 15
 sleep 15
 
 #./i_prog 16384
+
+rm output*.bin

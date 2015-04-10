@@ -1,12 +1,6 @@
-./i_prog 1023
-sleep 10
 ./i_prog 1024
 sleep 10
-./i_prog 1025
-sleep 10
 
-./i_prog 2047
-sleep 10
 ./i_prog 2048
 sleep 10
 
@@ -18,4 +12,4 @@ sleep 15
 
 #./i_prog 16384
 
-rm output*
+rm output*.bin
