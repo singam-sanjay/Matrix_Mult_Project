@@ -111,7 +111,7 @@ void MultABTransParLEGACYJFJ()
 	fprintf(stderr,"The actual function is in development.\n");
 }
 
-void MultABTransParLEGACY()
+void MultABTransParCacheAware()
 {
 	/* Cache Aware Multiplication
 	*
