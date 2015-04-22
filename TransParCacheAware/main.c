@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	GetA();
 	GetBTrans();
 
-	MultABTransParCacheAware();
+	MultABTransParCacheAware_ManyinAwithManyinB();
 
 	PutC();
 
