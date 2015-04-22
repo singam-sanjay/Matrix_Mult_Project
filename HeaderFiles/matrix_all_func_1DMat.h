@@ -185,6 +185,181 @@ void MultABTransParCacheAware()
 	return;
 }
 
+double * MultABTransParCacheAware_ManyinAwithOneinB()
+{
+	static double retVAL[2];
+	register int hor_tile_selector,ver_tile_selector,hor_tile_width,ver_tile_width;
+	register const int _N = N;
+	register double * b;
+
+	#define _1KB 	      (1024)
+	#define L3_cache_size (4096*_1KB)
+	#define L2_cache_size (256 *_1KB)
+	
+	#define hor_tile_length N
+	#define ver_tile_length N
+
+	#define A(r,c) (*(A + (r)*N + (c)   ))
+	#define B(r,c) (*(B + (r)   + (c)*N )) // since B is in transpose
+	#define C(r,c) (*(C + (r)*N + (c)   ))
+
+	hor_tile_width = L3_cache_size/(_N*sizeof(double));
+	ver_tile_width = 1;
+
+	if( hor_tile_width>_N )
+		hor_tile_width = _N;
+
+	#ifdef _OPENMP
+		double start = omp_get_wtime(), time;
+		omp_set_num_threads(1);
+	#else
+		clock_t start = clock();
+	#endif
+	unsigned long long t1,t0 = __rdtsc();
+	for( hor_tile_selector=0 ; hor_tile_selector<_N ; hor_tile_selector += hor_tile_width )
+	{
+		b = B;
+		for( ver_tile_selector = 0 ; ver_tile_selector<_N ; ver_tile_selector+= ver_tile_width )
+		{
+			register int row;
+			#pragma omp parallel for
+			for( row = hor_tile_selector ; row<(hor_tile_selector+hor_tile_width) ; row+=1 )
+			{
+				register int iter;
+				register double result = 0;
+				register const double * a = A + row*N;
+				#pragma unroll
+				for( iter = 0 ; iter<_N ; iter+=1 )
+				{
+					#ifdef DEBUG
+					//	printf("result += A[%i][%i] * B[%i][%i]\n",row,iter,iter,ver_tile_selector);
+						printf("@T%i result += %lf * %lf\n",omp_get_thread_num(),a[iter],b[iter]);
+					#endif
+				//	result += A(row,iter) * B(iter,ver_tile_selector) ;
+					result += a[iter] * b[iter];
+				}
+				#ifdef DEBUGSMALL
+					printf("@T%i C[%i][%i] = %lf\n",omp_get_thread_num(),row,ver_tile_selector,result);
+				#endif
+				C(row,ver_tile_selector) = result;
+			}
+			b += _N;
+		}
+	}
+	
+	t1 = __rdtsc();
+	#ifdef _OPENMP
+		retVAL[0] = omp_get_wtime()-start; 
+		retVAL[1] =GFlops( (t1-t0), (2.0f*N*N*N), get_cpu_freq_ghz()); 
+		printf("Total time %i : %lfs GFlOps : %lf\n", _N, retVAL[0], retVAL[1]);
+	#else
+		retVAL[0] = ( (double)(clock()-start) )/CLOCKS_PER_SEC;
+		retVAL[1] =GFlops( (t1-t0), (2.0f*N*N*N), get_cpu_freq_ghz()); 
+		printf("Total time %i : %lfs GFlOps : %lf\n", _N, retVAL[0], retVAL[1]);
+	#endif
+	
+	#undef A
+	#undef B
+	#undef C
+
+	#undef _1KB
+	#undef L3_cache_size
+	#undef L2_cache_size
+
+	return retVAL;
+}
+
+double *  MultABTransParCacheAware_ManyinAwithManyinB()
+{
+	static double retVAL[2];
+	register int hor_tile_selector,ver_tile_selector,hor_tile_width,ver_tile_width;
+	register const int _N = N;
+
+	#define _1KB 	      (1024)
+	#define L3_cache_size (4096*_1KB)
+	#define L2_cache_size (256 *_1KB)
+	
+	#define hor_tile_length N
+	#define ver_tile_length N
+
+	#define A(r,c) (*(A + (r)*N + (c)   ))
+	#define B(r,c) (*(B + (r)   + (c)*N )) // since B is in transpose
+	#define C(r,c) (*(C + (r)*N + (c)   ))
+
+	hor_tile_width = L3_cache_size/(_N*sizeof(double));
+	ver_tile_width = L2_cache_size/(_N*sizeof(double));
+
+	if( hor_tile_width>_N )
+		hor_tile_width = _N;
+
+	if( ver_tile_width>_N )
+		ver_tile_width = _N;
+	
+	#ifdef _OPENMP
+		double start = omp_get_wtime(), time;
+		omp_set_num_threads(NUMT);
+	#else
+		clock_t start = clock();
+	#endif
+	unsigned long long t1,t0 = __rdtsc();
+	for( hor_tile_selector=0 ; hor_tile_selector<_N ; hor_tile_selector += hor_tile_width )
+	{
+		for( ver_tile_selector = 0 ; ver_tile_selector<_N ; ver_tile_selector+= ver_tile_width )
+		{
+			register int col;
+			#pragma omp parallel for
+			for( col = ver_tile_selector ; col<(ver_tile_selector+ver_tile_width) ; col+=1 )
+			{
+				register int row,iter;
+				register double result;
+				register double * a = A+hor_tile_selector*N;
+				register double * b = B+col*_N;
+				for( row = hor_tile_selector ; row<(hor_tile_selector+hor_tile_width) ; row+=1 )
+				{
+					result = 0;
+					for( iter = 0 ; iter<N ; iter+=1 )
+					{
+						#ifdef DEBUG
+						//	printf("result += A[%i][%i] * B[%i][%i]\n",row,iter,iter,ver_tile_selector);
+							printf("result += %lf * %lf\n",A(row,iter),B(iter,col));
+						#endif
+					//	result += A(row,iter) * B(iter,col) ;
+						result += a[iter] * b[iter];
+					}
+					#ifdef DEBUGSMALL
+						printf("C[%i][%i] = %lf\n",row,col,result);
+					#endif
+					C(row,col) = result;
+					a += _N;
+				}
+			}
+		}
+	}
+	
+	t1 = __rdtsc();
+	#ifdef _OPENMP
+		retVAL[0] = omp_get_wtime()-start; 
+		retVAL[1] =GFlops( (t1-t0), (2.0f*N*N*N), get_cpu_freq_ghz()); 
+		printf("Total time %i : %lfs GFlOps : %lf\n", _N, retVAL[0], retVAL[1]);
+	#else
+		retVAL[0] = ( (double)(clock()-start) )/CLOCKS_PER_SEC;
+		retVAL[1] =GFlops( (t1-t0), (2.0f*N*N*N), get_cpu_freq_ghz()); 
+		printf("Total time %i : %lfs GFlOps : %lf\n", _N, retVAL[0], retVAL[1]);
+	#endif
+	
+	#undef A
+	#undef B
+	#undef C
+
+	#undef _1KB
+	#undef L3_cache_size
+	#undef L2_cache_size
+
+	return retVAL;
+}
+
+
+
 void MKLMultAB()
 {
 	omp_set_num_threads(NUMT);
